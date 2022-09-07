@@ -1,0 +1,667 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Liang Yi">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="RocketMQ高可用保证">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RocketMQ">
+<meta property="og:url" content="https://edison21.gitee.io/2022/08/30/Distribution%20middleware/RocketMQ/index.html">
+<meta property="og:site_name" content="edison&#39;s blog">
+<meta property="og:description" content="RocketMQ高可用保证">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://res.cloudinary.com/higher/image/upload/v1661717445/2022/08/0d5c02423b34459e092942194bdf07fc.png">
+<meta property="og:image" content="https://res.cloudinary.com/higher/image/upload/v1661717445/2022/08/03d8b2744402731b1da535c8a9920b5f.png">
+<meta property="og:image" content="https://res.cloudinary.com/higher/image/upload/v1661717445/2022/08/f868e0311778b1021261f372e70372b8.png">
+<meta property="article:published_time" content="2022-08-30T13:23:00.000Z">
+<meta property="article:modified_time" content="2022-08-29T16:00:00.000Z">
+<meta property="article:author" content="Liang Yi">
+<meta property="article:tag" content="RocketMQ">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://res.cloudinary.com/higher/image/upload/v1661717445/2022/08/0d5c02423b34459e092942194bdf07fc.png">
+  
+  
+  
+  <title>RocketMQ - edison&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"edison21.gitee.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>edison</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="RocketMQ"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-08-30 21:23" pubdate>
+          2022年8月30日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          76 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">RocketMQ</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h1><h2 id="集群架构"><a href="#集群架构" class="headerlink" title="集群架构"></a>集群架构</h2><p><img src="https://res.cloudinary.com/higher/image/upload/v1661717445/2022/08/0d5c02423b34459e092942194bdf07fc.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<h3 id="NameServer"><a href="#NameServer" class="headerlink" title="NameServer"></a>NameServer</h3><ol>
+<li>NameServer互相独立，彼此没有通信关系，单台NameServer挂掉，不影响其他<br>NameServer。</li>
+<li>NameServer不去连接别的机器，不主动推消息。</li>
+<li>单个Broker（Master、Slave）与所有NameServer进行定时注册，以便告知NameServer自己还活着。<br>Broker每隔30秒向所有NameServer发送心跳，心跳包含了自身的topic配置信息。<br>NameServer每隔10秒，扫描所有还存活的broker连接，如果某个连接的最后更新时间与当前时间差值超过2分钟，则断开此连接，NameServer也会断开此broker下所有与slave的连接。同时更新topic与队列的对应关系，但不通知生产者和消费者。<br>Broker slave同步或者异步从Broker master上拷贝数据。</li>
+<li>Consumer随机与一个NameServer建立长连接，如果该NameServer断开，则从<br>NameServer列表中查找下一个进行连接。<br>Consumer主要从NameServer中根据Topic查询Broker的地址，查到就会缓存到客户<br>端，并向提供Topic服务的Master、Slave建立长连接，且定时向Master、Slave发送心跳。<br>如果Broker宕机，则NameServer会将其剔除，而Consumer端的定时任务MQClientInstance.this.updateTopicRouteInfoFromNameServer每30秒执行一次，将Topic对应的Broker地址拉取下来，此地址只有Slave地址了，此时Consumer从Slave上消费。<br>消费者与Master和Slave都建有连接，在不同场景有不同的消费规则。</li>
+<li>Producer随机与一个NameServer建立长连接，每隔30秒（此处时间可配置）从<br>NameServer获取Topic的最新队列情况，如果某个Broker Master宕机，Producer最多30秒才能感知，在这个期间，发往该broker master的消息失败。Producer向提供Topic服务的Master建立长连接，且定时向Master发送心跳。<br>生产者与所有的master连接，但不能向slave写入。<br>客户端是先从NameServer寻址的，得到可用Broker的IP和端口信息，然后据此信息连接broker。<br>综上所述，NameServer在RocketMQ中的作用：<br>1）NameServer用来保存活跃的broker列表，包括Master和Slave 。<br>2）NameServer用来保存所有topic和该topic所有队列的列表。<br>3）NameServer用来保存所有broker的Filter列表。<br>4）命名服务器为客户端，包括生产者，消费者和命令行客户端提供最新的路由信息。</li>
+</ol>
+<h2 id="心跳"><a href="#心跳" class="headerlink" title="心跳"></a>心跳</h2><h3 id="生产者（消费者）维护broker地址"><a href="#生产者（消费者）维护broker地址" class="headerlink" title="生产者（消费者）维护broker地址"></a>生产者（消费者）维护broker地址</h3><ol>
+<li>客户端定时任务从name server上拉去最新的broker列表</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-comment">// MQClientInstance的startScheduledTask()函数代码</span><br><span class="hljs-built_in">this</span>.scheduledExecutorService.scheduleAtFixedRate(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Runnable</span>() &#123;<br><br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">run</span><span class="hljs-params">()</span> &#123;<br>        <span class="hljs-keyword">try</span> &#123;<br>            MQClientInstance.<span class="hljs-built_in">this</span>.updateTopicRouteInfoFromNameServer();<br>        &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;<br>            log.error(<span class="hljs-string">&quot;ScheduledTask updateTopicRouteInfoFromNameServer exception&quot;</span>, e);<br>        &#125;<br>    &#125;<br>&#125;, <span class="hljs-number">10</span>, <span class="hljs-built_in">this</span>.clientConfig.getPollNameServerInteval(), TimeUnit.MILLISECONDS);<br></code></pre></td></tr></table></figure>
+
+<p>这里的<code>pollNameServerInteval</code>默认是30s。这也就是意味着，默认情况下，当某个Broker挂了之后，Client需要<code>30s</code>的延迟才会得知此消息。</p>
+<ol>
+<li>客户端与Broker建立心跳</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">sendHeartbeatToAllBroker</span><span class="hljs-params">()</span> &#123;<br>        <span class="hljs-comment">// 首先准备好心跳信息，主要是Producer和comsumer相关信息，内容后面会具体分析</span><br>        <span class="hljs-keyword">final</span> <span class="hljs-type">HeartbeatData</span> <span class="hljs-variable">heartbeatData</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">this</span>.prepareHeartbeatData();<br>        <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">producerEmpty</span> <span class="hljs-operator">=</span> heartbeatData.getProducerDataSet().isEmpty();<br>        <span class="hljs-keyword">final</span> <span class="hljs-type">boolean</span> <span class="hljs-variable">consumerEmpty</span> <span class="hljs-operator">=</span> heartbeatData.getConsumerDataSet().isEmpty();<br>        <span class="hljs-keyword">if</span> (producerEmpty &amp;&amp; consumerEmpty) &#123;<br>            log.warn(<span class="hljs-string">&quot;sending heartbeat, but no consumer and no producer&quot;</span>);<br>            <span class="hljs-keyword">return</span>;<br>        &#125;<br><br>        <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">this</span>.brokerAddrTable.isEmpty()) &#123;<br>            <span class="hljs-type">long</span> <span class="hljs-variable">times</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">this</span>.sendHeartbeatTimesTotal.getAndIncrement();<br>            Iterator&lt;Entry&lt;String, HashMap&lt;Long, String&gt;&gt;&gt; it = <span class="hljs-built_in">this</span>.brokerAddrTable.entrySet().iterator();<br>            <span class="hljs-keyword">while</span> (it.hasNext()) &#123;<br>                Entry&lt;String, HashMap&lt;Long, String&gt;&gt; entry = it.next();<br>                <span class="hljs-type">String</span> <span class="hljs-variable">brokerName</span> <span class="hljs-operator">=</span> entry.getKey();<br>                HashMap&lt;Long, String&gt; oneTable = entry.getValue();<br>                <span class="hljs-keyword">if</span> (oneTable != <span class="hljs-literal">null</span>) &#123;<br>                    <span class="hljs-keyword">for</span> (Map.Entry&lt;Long, String&gt; entry1 : oneTable.entrySet()) &#123;<br>                        <span class="hljs-type">Long</span> <span class="hljs-variable">id</span> <span class="hljs-operator">=</span> entry1.getKey();<br>                        <span class="hljs-type">String</span> <span class="hljs-variable">addr</span> <span class="hljs-operator">=</span> entry1.getValue();<br>                        <span class="hljs-keyword">if</span> (addr != <span class="hljs-literal">null</span>) &#123;<br>                            <span class="hljs-keyword">if</span> (consumerEmpty) &#123; <span class="hljs-comment">// 如果没有conumser则剔除掉slave结点，因为producer只需要与master维持心跳即可</span><br>                                <span class="hljs-keyword">if</span> (id != MixAll.MASTER_ID)<br>                                    <span class="hljs-keyword">continue</span>;<br>                            &#125;<br><br>                            <span class="hljs-keyword">try</span> &#123;<br>                                <span class="hljs-type">int</span> <span class="hljs-variable">version</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">this</span>.mQClientAPIImpl.sendHearbeat(addr, heartbeatData, <span class="hljs-number">3000</span>);<br>                                <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">this</span>.brokerVersionTable.containsKey(brokerName)) &#123;<br>                                    <span class="hljs-built_in">this</span>.brokerVersionTable.put(brokerName, <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;String, Integer&gt;(<span class="hljs-number">4</span>));<br>                                &#125;<br>                                <span class="hljs-built_in">this</span>.brokerVersionTable.get(brokerName).put(addr, version);<br>                                <span class="hljs-keyword">if</span> (times % <span class="hljs-number">20</span> == <span class="hljs-number">0</span>) &#123;<span class="hljs-comment">// 减少日志频率</span><br>                                    log.info(<span class="hljs-string">&quot;send heart beat to broker[&#123;&#125; &#123;&#125; &#123;&#125;] success&quot;</span>, brokerName, id, addr);<br>                                    log.info(heartbeatData.toString());<br>                                &#125;<br>                            &#125; <span class="hljs-keyword">catch</span> (Exception e) &#123;<br>                                <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.isBrokerInNameServer(addr)) &#123;<br>                                    log.info(<span class="hljs-string">&quot;send heart beat to broker[&#123;&#125; &#123;&#125; &#123;&#125;] failed&quot;</span>, brokerName, id, addr);<br>                                &#125; <span class="hljs-keyword">else</span> &#123;<br>                                    log.info(<span class="hljs-string">&quot;send heart beat to broker[&#123;&#125; &#123;&#125; &#123;&#125;] exception, because the broker not up, forget it&quot;</span>, brokerName,<br>                                        id, addr);<br>                                &#125;<br>                            &#125;<br>                        &#125;<br>                    &#125;<br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;<br><br>------<br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">HeartbeatData</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">RemotingSerializable</span> &#123;<br>    <span class="hljs-keyword">private</span> String clientID;<br>    <span class="hljs-keyword">private</span> Set&lt;ProducerData&gt; producerDataSet = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashSet</span>&lt;ProducerData&gt;();<br>    <span class="hljs-keyword">private</span> Set&lt;ConsumerData&gt; consumerDataSet = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashSet</span>&lt;ConsumerData&gt;();<br> &#125;<br><br>------<br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ProducerData</span> &#123;<br>    <span class="hljs-keyword">private</span> String groupName;<br>&#125;<br><br>------<br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ConsumerData</span> &#123;<br>    <span class="hljs-keyword">private</span> String groupName; <span class="hljs-comment">// 分组</span><br>    <span class="hljs-keyword">private</span> ConsumeType consumeType; <span class="hljs-comment">// 消费类型，有推模式和拉模式两种</span><br>    <span class="hljs-keyword">private</span> MessageModel messageModel;<span class="hljs-comment">// 消息类型，广播和集群消费两种</span><br>    <span class="hljs-keyword">private</span> ConsumeFromWhere consumeFromWhere; <span class="hljs-comment">// 从何处开始消费，从一开始偏移量，从最后偏移量，或者按时间戳消费。</span><br>    <span class="hljs-keyword">private</span> Set&lt;SubscriptionData&gt; subscriptionDataSet = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashSet</span>&lt;SubscriptionData&gt;();<span class="hljs-comment">// 订阅信息</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-type">boolean</span> unitMode; <span class="hljs-comment">// 单元模式，默认是false。这个与topic有关，但是没看懂拿来干嘛的？</span><br>&#125;  <br></code></pre></td></tr></table></figure>
+
+<h2 id="客户端上下线感知"><a href="#客户端上下线感知" class="headerlink" title="客户端上下线感知"></a>客户端上下线感知</h2><p>上线（client 和 broker）依靠name server</p>
+<p>下线（client 和 broker）依靠name server  + 心跳</p>
+<h1 id="保证消息不丢失"><a href="#保证消息不丢失" class="headerlink" title="保证消息不丢失"></a>保证消息不丢失</h1><p><img src="https://res.cloudinary.com/higher/image/upload/v1661717445/2022/08/03d8b2744402731b1da535c8a9920b5f.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<h2 id="生产者阶段"><a href="#生产者阶段" class="headerlink" title="生产者阶段"></a>生产者阶段</h2><h3 id="发消息形式"><a href="#发消息形式" class="headerlink" title="发消息形式"></a>发消息形式</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-comment">// 同步发送</span><br><span class="hljs-type">SendResult</span> <span class="hljs-variable">sendResult</span> <span class="hljs-operator">=</span> producer.send(msg);<br><br><span class="hljs-comment">// 异步发送</span><br>producer.send(msg, <span class="hljs-keyword">new</span> <span class="hljs-title class_">SendCallback</span>() &#123;<br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onSuccess</span><span class="hljs-params">(SendResult sendResult)</span> &#123;<br>        ...<br>        &#125;<br><br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onException</span><span class="hljs-params">(Throwable e)</span> &#123;<br>        ...<br>        &#125;<br>&#125;);<br><br><span class="hljs-comment">// sendOneway</span><br>producer.sendOneway(msg);<br><br>------------------------------<br>SendResult定义说明<br>    <br>SEND_OK:<br>消息发送成功。要注意的是消息发送成功也不意味着它是可靠的。要确保不会丢失任何消息，还应启用同步Master服务器或同步刷盘，即SYNC_MASTER或SYNC_FLUSH。<br>FLUSH_DISK_TIMEOUT:<br>消息发送成功但是服务器刷盘超时。此时消息已经进入服务器队列（内存），只有服务器宕机，消息才会丢失。消息存储配置参数中可以设置刷盘方式和同步刷盘时间长度，如果Broker服务器设置了刷盘方式为同步刷盘，即FlushDiskType=SYNC_FLUSH（默认为异步刷盘方式），当Broker服务器未在同步刷盘时间内（默认为5s）完成刷盘，则将返回该状态——刷盘超时。<br>FLUSH_SLAVE_TIMEOUT:<br>消息发送成功，但是服务器同步到Slave时超时。此时消息已经进入服务器队列，只有服务器宕机，消息才会丢失。如果Broker服务器的角色是同步Master，即SYNC_MASTER（默认是异步Master即ASYNC_MASTER），并且从Broker服务器未在同步刷盘时间（默认为<span class="hljs-number">5</span>秒）内完成与主服务器的同步，则将返回该状态——数据同步到Slave服务器超时。<br>SLAVE_NOT_AVAILABLE:<br>消息发送成功，但是此时Slave不可用。如果Broker服务器的角色是同步Master，即SYNC_MASTER（默认是异步Master服务器即ASYNC_MASTER），但没有配置slave Broker服务器，则将返回该状态——无Slave服务器可用。<br>------------------------------<br>指定队列<br><span class="hljs-comment">// 普通消息：不需要指定MessageQueue或者MessageQueueSelector参数</span><br>SendResult <span class="hljs-title function_">send</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Message msg)</span> <br>    <br><span class="hljs-comment">// 普通有序消息：指定MessageQueueSelector参数，动态决定需要发送到哪个队列，出现异常情况下，才 发送到其他对下列 </span><br>SendResult <span class="hljs-title function_">send</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Message msg, <span class="hljs-keyword">final</span> MessageQueueSelector selector, <span class="hljs-keyword">final</span> Object arg)</span><br>    <br><span class="hljs-comment">// 严格有序消息：指定MessageQueue参数，明确指定发送到哪个队列，如我们可以将一个用户的数据总是发 送到某个队列 </span><br>SendResult <span class="hljs-title function_">send</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Message msg, <span class="hljs-keyword">final</span> MessageQueue mq)</span><br></code></pre></td></tr></table></figure>
+
+<p>同步发送直接返回SendResult，可靠性高。异步发送可以设置回调，可靠性也高，通常用在对方法执行时间要求少的情况。sendOneway用在发送大量数据，如日志场景</p>
+<p>为保证消息不丢失，可选择<code>同步发送</code>或<code>异步发送</code>(异步发送可能需要自己保证同步机制)</p>
+<h3 id="发送失败重试"><a href="#发送失败重试" class="headerlink" title="发送失败重试"></a>发送失败重试</h3><h4 id="默认重试次数"><a href="#默认重试次数" class="headerlink" title="默认重试次数"></a>默认重试次数</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><code class="hljs java">producer.setRetryTimesWhenSendFailed(count)<br>    <br># com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl#sendDefaultImpl<br><span class="hljs-type">int</span> <span class="hljs-variable">timesTotal</span> <span class="hljs-operator">=</span> <span class="hljs-number">1</span> + <span class="hljs-built_in">this</span>.defaultMQProducer.getRetryTimesWhenSendFailed();<br><span class="hljs-type">int</span> <span class="hljs-variable">times</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>;<br>String[] brokersSent = <span class="hljs-keyword">new</span> <span class="hljs-title class_">String</span>[timesTotal];<br><span class="hljs-keyword">for</span> (; times &lt; timesTotal &amp;&amp; (endTimestamp - beginTimestamp) &lt; maxTimeout; times++) &#123;<br>    <span class="hljs-type">String</span> <span class="hljs-variable">lastBrokerName</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span> == mq ? <span class="hljs-literal">null</span> : mq.getBrokerName();<br>    <span class="hljs-type">MessageQueue</span> <span class="hljs-variable">tmpmq</span> <span class="hljs-operator">=</span> topicPublishInfo.selectOneMessageQueue(lastBrokerName);<br>    <span class="hljs-keyword">if</span> (tmpmq != <span class="hljs-literal">null</span>) &#123;<br>        mq = tmpmq;<br>        brokersSent[times] = mq.getBrokerName();<br>        <span class="hljs-keyword">try</span> &#123;<br>            sendResult = <span class="hljs-built_in">this</span>.sendKernelImpl(msg, mq, communicationMode, sendCallback, timeout);<br>            endTimestamp = System.currentTimeMillis();<br>            <span class="hljs-keyword">switch</span> (communicationMode) &#123;<br>            <span class="hljs-keyword">case</span> ASYNC:<br>                <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;<br>            <span class="hljs-keyword">case</span> ONEWAY:<br>                <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;<br>            <span class="hljs-keyword">case</span> SYNC:<br>                <span class="hljs-keyword">if</span> (sendResult.getSendStatus() != SendStatus.SEND_OK) &#123;<br>                    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.defaultMQProducer.isRetryAnotherBrokerWhenNotStoreOK()) &#123;<br>                        <span class="hljs-keyword">continue</span>;<br>                    &#125;<br>                &#125;<br>                <span class="hljs-keyword">return</span> sendResult;<br>            <span class="hljs-keyword">default</span>:<br>                <span class="hljs-keyword">break</span>;<br>            &#125;<br>        &#125;<br>        <span class="hljs-keyword">catch</span> (Exception e) &#123;<br>            endTimestamp = System.currentTimeMillis();<br>            <span class="hljs-keyword">continue</span>;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">else</span> &#123;<br>        <span class="hljs-keyword">break</span>;<br>    &#125;<br>&#125; <span class="hljs-comment">// end of</span><br></code></pre></td></tr></table></figure>
+
+<h4 id="根据Broker重试"><a href="#根据Broker重试" class="headerlink" title="根据Broker重试"></a>根据Broker重试</h4><ol>
+<li>例如Broker集群只是由一组Master&#x2F;Slave组成，发送消息只会选择Master，如果这个Master失败了，没有其他Master可选，此时已然会选择这个Master上的其他Queue。</li>
+<li>在实际生产环境中，通常Broker集群至少由2组Master&#x2F;Slave组成，甚至更多，一般建议：3主3从。这样就可以很好的利用RocketMQ对于普通消息发送的重试机制，每次重试到不同的Broker上。</li>
+</ol>
+<h2 id="Broker阶段"><a href="#Broker阶段" class="headerlink" title="Broker阶段"></a>Broker阶段</h2><h3 id="刷盘机制-集群模式"><a href="#刷盘机制-集群模式" class="headerlink" title="刷盘机制 + 集群模式"></a>刷盘机制 + 集群模式</h3><p>broker：消息默认保存到broker的内存中，异步保存到磁盘上，如果发生宕机、磁盘崩溃（RAID技术解决）会造成消息丢失</p>
+<p>消息到了broker之后，默认是优先保存到broker的内存中，然后立刻返回响应给生产者producer，然后broker自己定期将消息批量的异步的保存到硬盘上</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-comment"># 默认情况为 ASYNC_FLUSH (异步刷盘)</span><br><span class="hljs-comment"># SYNC_FLUSH 同步刷盘</span><br>flushDiskType = SYNC_FLUSH<br><br><span class="hljs-comment"># 主从集群</span><br><br><span class="hljs-comment">## master 节点配置</span><br>flushDiskType = SYNC_FLUSH<br>brokerRole=SYNC_MASTER<br><br><span class="hljs-comment">## slave 节点配置</span><br>brokerRole=slave<br>flushDiskType = SYNC_FLUSH<br></code></pre></td></tr></table></figure>
+
+<p>只有slave也刷盘到磁盘成功之后，才会给producer返回成功</p>
+<h3 id="磁盘高可用保障"><a href="#磁盘高可用保障" class="headerlink" title="磁盘高可用保障"></a>磁盘高可用保障</h3><p>RAID</p>
+<p><img src="https://res.cloudinary.com/higher/image/upload/v1661717445/2022/08/f868e0311778b1021261f372e70372b8.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<h2 id="消费者端"><a href="#消费者端" class="headerlink" title="消费者端"></a>消费者端</h2><h3 id="返回状态"><a href="#返回状态" class="headerlink" title="返回状态"></a>返回状态</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs bash">ConsumeConcurrentlyStatus:<br>1. CONSUME_SUCCES<br>2. RECONSUME_LATER<br><br><span class="hljs-comment"># ConsumeRequest.class</span><br><span class="hljs-keyword">if</span> (null == status) &#123;<br>  <span class="hljs-keyword">if</span> (hasException) &#123;<br>    returnType = ConsumeReturnType.EXCEPTION;<br>  &#125; <span class="hljs-keyword">else</span> &#123;<br>    returnType = ConsumeReturnType.RETURNNULL;<br>  &#125;<br>&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (consumeRT &gt;= defaultMQPushConsumer.getConsumeTimeout() * 60 * 1000) &#123;<br>  returnType = ConsumeReturnType.TIME_OUT;<br>&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (ConsumeConcurrentlyStatus.RECONSUME_LATER == status) &#123;<br>  returnType = ConsumeReturnType.FAILED;<br>&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (ConsumeConcurrentlyStatus.CONSUME_SUCCESS == status) &#123;<br>  returnType = ConsumeReturnType.SUCCESS;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>失败情况：</p>
+<ol>
+<li>消费者返回了<code>RECONSUME_LATER</code></li>
+<li>超时</li>
+<li>抛异常 或者 返回<code>null</code></li>
+</ol>
+<h3 id="消费失败重试-业务保障"><a href="#消费失败重试-业务保障" class="headerlink" title="消费失败重试 + 业务保障"></a>消费失败重试 + 业务保障</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ConsumerSimple</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">RocketMQListener</span>&lt;MessageExt&gt; &#123;<br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">onMessage</span><span class="hljs-params">(MessageExt messageExt)</span> &#123;<br>        <span class="hljs-comment">//取出当前重试次数</span><br>        <span class="hljs-type">int</span> <span class="hljs-variable">reconsumeTimes</span> <span class="hljs-operator">=</span> messageExt.getReconsumeTimes();<br>        <span class="hljs-comment">//当大于一定的次数后将消息写入数据库 ，由单独的程序或人工去处理</span><br>        <span class="hljs-keyword">if</span> (reconsumeTimes &gt;= <span class="hljs-number">2</span>) &#123;<br>            <span class="hljs-comment">//将消息写入数据库 ，之后正常返回</span><br>            <span class="hljs-keyword">return</span>;<br>        &#125;<br>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(String.format(<span class="hljs-string">&quot;第%s次处理失败 ..&quot;</span>, reconsumeTimes));<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>一条消息消费重试多次都失败，基本上后面也会失败。可以存入中间表并返回<code>CONSUME_SUCCES</code>交由人工处理，不影响后面的消息消费。</p>
+<h1 id="消费幂等性保证"><a href="#消费幂等性保证" class="headerlink" title="消费幂等性保证"></a>消费幂等性保证</h1><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs java"># at-most-once 最多一次 可能会没有<br># at-least-once 至少一次 可能会有多次<br># exactly-once 刚好一次<br></code></pre></td></tr></table></figure>
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Distribution-middleware/" class="category-chain-item">Distribution middleware</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/RocketMQ/">#RocketMQ</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>RocketMQ</div>
+      <div>https://edison21.gitee.io/2022/08/30/Distribution middleware/RocketMQ/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Liang Yi</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年8月30日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/08/30/DevOps/Git/" title="Git">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Git</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/08/30/SQL/MyBatis%E6%9C%89%E5%88%99%E6%96%B0%E5%A2%9E%EF%BC%8C%E6%97%A0%E5%88%99%E6%8F%92%E5%85%A5/" title="MyBatis有则新增，无则插入">
+                        <span class="hidden-mobile">MyBatis有则新增，无则插入</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
